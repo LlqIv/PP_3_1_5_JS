@@ -1,40 +1,29 @@
 package ru.kata.spring.boot_security.demo.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import ru.kata.spring.boot_security.demo.model.Role;
+import org.springframework.transaction.annotation.Transactional;
 import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
-import javax.transaction.Transactional;
-import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
-public class UserServiceImpl implements UserService, UserDetailsService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    public UserServiceImpl(UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    @Transactional
     @Override
-    public void saveUser(User user) {
-        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-        userRepository.save(user);
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email).orElseGet(User::new);
     }
 
     @Override
@@ -43,55 +32,36 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public User getUserById(Long id) {
-        Optional<User> userById = userRepository.findById(id);
-        if (userById.isPresent()) {
-            return userById.get();
-        } else {
-            throw new UsernameNotFoundException(String.format("User with %s id not found", id));
-        }
+    public User getUserById(long id) {
+        return userRepository.getById(id);
     }
 
     @Override
-    public User getUserByUsername(String username) {
-        return userRepository.getUserByUsername(username);
+    @Transactional
+    public void saveUser(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
     }
 
-    @Transactional
     @Override
-    public void updateUser(Long id, User user) {
-        Optional<User> userBuId = userRepository.findById(id);
-        if (userBuId.isPresent()) {
-            User userFromRepo = userBuId.get();
-            userFromRepo.setId(id);
-            userFromRepo.setUsername(user.getUsername());
-            userFromRepo.setName(user.getName());
-            userFromRepo.setLastName(user.getLastName());
-            userFromRepo.setEmail(user.getEmail());
-            userRepository.save(userFromRepo);
-        } else {
-            throw new UsernameNotFoundException(String.format("User %s with %s id not found", user, id));
+    @Transactional
+    public void updateUser(User updateUser) {
+        User user = userRepository.getById(updateUser.getId());
+        if(!user.getPassword().equals(updateUser.getPassword())) {
+            updateUser.setPassword(passwordEncoder.encode(updateUser.getPassword()));
         }
+        userRepository.save(updateUser);
     }
 
+    @Override
     @Transactional
-    public void removeUserById(Long id) {
+    public void deleteUserById(long id) {
         userRepository.deleteById(id);
     }
 
     @Override
-    @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = getUserByUsername(username);
-        if (user == null) {
-            throw new UsernameNotFoundException(String.format("User %s not found", username));
-        }
-        return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
-                mapRolesToAuthorities(user.getRoles()));
+        return userRepository.findUserByFirstName(username)
+                .orElseThrow(() -> new IllegalArgumentException("Username not found!!"));
     }
-
-    private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Collection<Role> roles) {
-        return roles.stream().map(r -> new SimpleGrantedAuthority(r.getName())).collect(Collectors.toList());
-    }
-
 }

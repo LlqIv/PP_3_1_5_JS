@@ -4,25 +4,26 @@ import org.springframework.security.core.GrantedAuthority;
 
 import javax.persistence.*;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
-@Table(name = "roles_3_1_3")
+@Table(name = "roles")
 public class Role implements GrantedAuthority {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "role_id")
-    private Long id;
-
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="role_id")
+    private long id;
     @Column(name = "role_name")
-    private String name;
+    private String roleName;
 
-    public Role() {
+    @ManyToMany(mappedBy = "roles")
+    private Set<User> userSet;
 
-    }
+    public Role() {}
 
-    public Role(String name) {
-        this.name = name;
+    public Role(String roleName) {
+        this.roleName = roleName;
     }
 
     public Long getId() {
@@ -33,18 +34,17 @@ public class Role implements GrantedAuthority {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public String getRoleName() {
+        return roleName;
     }
-
 
     @Override
     public String getAuthority() {
-        return getName();
+        return getRoleName();
     }
 
     @Override
@@ -52,11 +52,19 @@ public class Role implements GrantedAuthority {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Role role = (Role) o;
-        return Objects.equals(id, role.id) && Objects.equals(name, role.name);
+        return id == role.id && Objects.equals(roleName, role.roleName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name);
+        return Objects.hash(id, roleName);
+    }
+
+    public Set<User> getUserSet() {
+        return userSet;
+    }
+
+    public void setUserSet(Set<User> userSet) {
+        this.userSet = userSet;
     }
 }

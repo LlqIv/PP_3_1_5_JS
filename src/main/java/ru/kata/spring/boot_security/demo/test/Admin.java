@@ -25,10 +25,12 @@ public class Admin {
     @PostConstruct
     public void initialization() {
         Role roleAdmin = new Role("ROLE_ADMIN");
+        Role roleUser = new Role("ROLE_USER");
         roleService.saveRole(roleAdmin);
+        roleService.saveRole(roleUser);
 
-        User admin = new User("admin", "admin", "admin", "admin",
-                "admin", Set.of(roleAdmin));
+        User admin = new User("admin", "admin", "admin@mail.ru", 12, "admin");
+        admin.setRoles(Set.of(roleAdmin));
         usersService.saveUser(admin);
 
     }
